@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Dashboard</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="header">
+Municipality Complaint Dashboard
+</div>
+
+<div class="container">
+
+<h2>Submit Complaint</h2>
+
+<select id="category">
+<option>Garbage</option>
+<option>Pothole</option>
+<option>Street Light</option>
+<option>Water Leakage</option>
+</select>
+
+<textarea id="description" placeholder="Describe the problem"></textarea>
+
+<input id="location" placeholder="Location">
+
+<button onclick="submitComplaint()">Submit Complaint</button>
+
+</div>
+
+<h2 style="text-align:center">My Complaints</h2>
+
+<table id="complaintsTable">
+
+<tr>
+<th>ID</th>
+<th>Category</th>
+<th>Description</th>
+<th>Status</th>
+</tr>
+
+</table>
+
+<script src="script.js"></script>
+
+</body>
+</html>
