@@ -29,12 +29,12 @@ function adminLogin() {
 // =========================
 if (window.location.pathname.includes("admin.html")) {
 
-    // LOAD OFFICERS LIST (for officer management table)
+    // LOAD OFFICERS LIST
     fetch(server + "/officers")
         .then(res => res.json())
         .then(officers => {
 
-            // Populate officer management table
+            // Populate officer table
             let officersTable = document.getElementById("officersTable");
 
             if (officersTable) {
@@ -69,7 +69,9 @@ if (window.location.pathname.includes("admin.html")) {
 
             }
 
+            // =========================
             // LOAD COMPLAINTS
+            // =========================
             fetch(server + "/admin/complaints")
                 .then(res => res.json())
                 .then(data => {
@@ -82,6 +84,7 @@ if (window.location.pathname.includes("admin.html")) {
                         <th>Category</th>
                         <th>Description</th>
                         <th>Status</th>
+                        <th>Priority</th>
                         <th>Assign Officer</th>
                         </tr>
                     `;
@@ -101,6 +104,7 @@ if (window.location.pathname.includes("admin.html")) {
                             <td>${c.category}</td>
                             <td>${c.description}</td>
                             <td id="status${c.complaint_id}">${c.status || "Pending"}</td>
+                            <td>${c.priority_count || 1}</td>
                             <td>
                                 <select id="officer${c.complaint_id}">
                                     ${officerOptions}
@@ -111,6 +115,11 @@ if (window.location.pathname.includes("admin.html")) {
                                 </button>
                             </td>
                         `;
+
+                        // Highlight high priority complaints
+                        if (c.priority_count >= 3) {
+                            row.style.backgroundColor = "#ffe5e5";
+                        }
 
                         table.appendChild(row);
 

@@ -11,22 +11,28 @@ const db = new sqlite3.Database("complaints.db");
 /* =========================
    CITIZEN REGISTER
 ========================= */
-app.post("/citizen/register", (req, res) => {
-    const { name, email, password, ward, phone } = req.body;
+app.post("/citizen/register",(req,res)=>{
 
-    db.run(
-        `INSERT INTO citizens (name,email,password,ward,phone) VALUES (?,?,?,?,?)`,
-        [name, email, password, ward, phone],
-        function (err) {
-            if (err) {
-                console.log(err);
-                res.json({ message: "Registration failed" });
-            } else {
-                res.json({ message: "Citizen registered successfully" });
-            }
-        }
-    );
+const {name,email,password,ward,phone}=req.body;
+
+db.run(
+`INSERT INTO citizens(name,email,password,ward,phone)
+VALUES(?,?,?,?,?)`,
+[name,email,password,ward,phone],
+
+function(err){
+
+if(err){
+console.log(err);
+res.json({message:"Registration failed"});
+}else{
+res.json({message:"Registration successful"});
+}
+
 });
+
+});
+
 
 /* =========================
    CITIZEN LOGIN
@@ -47,24 +53,67 @@ app.post("/citizen/login", (req, res) => {
     );
 });
 
-/* =========================
-   SUBMIT COMPLAINT
-========================= */
-app.post("/complaint", (req, res) => {
-    const { citizen_id, category, description } = req.body;
-    const date = new Date().toISOString().split("T")[0];
 
-    db.run(
-        `INSERT INTO complaints (citizen_id,category,description,complaint_date) VALUES (?,?,?,?)`,
-        [citizen_id, category, description, date],
-        (err) => {
-            if (err) {
-                res.json({ message: "Error submitting complaint" });
-            } else {
-                res.json({ message: "Complaint submitted" });
-            }
-        }
-    );
+/* =========================
+   SUBMIT COMPLAINT WITH DUPLICATE DETECTION
+========================= */
+app.post("/complaint", (req,res)=>{
+
+const {citizen_id,category,description}=req.body;
+
+let keyword = description.split(" ")[0];
+
+db.get(
+`SELECT * FROM complaints
+WHERE category=? 
+AND description LIKE ?
+AND complaint_date >= date('now','-3 day')`,
+[category,"%"+keyword+"%"],
+
+function(err,row){
+
+if(row){
+
+// Similar complaint found
+db.run(
+`UPDATE complaints
+SET priority_count = priority_count + 1
+WHERE complaint_id=?`,
+[row.complaint_id],
+
+function(){
+
+res.json({
+message:"Similar complaint already received. Priority increased."
+});
+
+});
+
+}else{
+
+// New complaint
+const date = new Date().toISOString().split("T")[0];
+
+db.run(
+`INSERT INTO complaints
+(citizen_id,category,description,complaint_date,priority_count,status)
+VALUES(?,?,?,?,1,'Pending')`,
+[citizen_id,category,description,date],
+
+function(err){
+
+if(err){
+res.json({message:"Error submitting complaint"});
+}else{
+res.json({message:"Complaint submitted"});
+}
+
+});
+
+}
+
+});
+
 });
 
 /* =========================
