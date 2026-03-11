@@ -1,170 +1,258 @@
-// Server URL
 const server = "http://localhost:3000";
 
-// =========================
-// ADMIN LOGIN
-// =========================
-function adminLogin() {
-    fetch(server + "/admin/login", {
-        method: "POST",
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            username: document.getElementById("username").value,
-            password: document.getElementById("password").value
-        })
-    })
-        .then(res => res.json())
-        .then(data => {
-            if (data.admin_id) {
-                localStorage.setItem("admin_id", data.admin_id);
-                window.location = "admin.html";
-            } else {
-                alert("Invalid login");
-            }
-        });
-}
+/* =========================
+   ADMIN LOGIN
+========================= */
 
-// =========================
-// LOAD ADMIN DASHBOARD
-// =========================
-if (window.location.pathname.includes("admin.html")) {
 
-    // LOAD OFFICERS LIST
-    fetch(server + "/officers")
-        .then(res => res.json())
-        .then(officers => {
 
-            // Populate officer table
-            let officersTable = document.getElementById("officersTable");
+function adminLogin(){
 
-            if (officersTable) {
+let username = document.getElementById("username").value;
+let password = document.getElementById("password").value;
 
-                officersTable.innerHTML = `
-                <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Department</th>
-                <th>Action</th>
-                </tr>
-                `;
+fetch(server + "/admin/login", {
 
-                officers.forEach(o => {
+method: "POST",
 
-                    let row = document.createElement("tr");
+headers: {
+"Content-Type": "application/json"
+},
 
-                    row.innerHTML = `
-                        <td>${o.officer_id}</td>
-                        <td>${o.name}</td>
-                        <td>${o.department || ""}</td>
-                        <td>
-                        <button onclick="deleteOfficer(${o.officer_id})">
-                        Delete
-                        </button>
-                        </td>
-                    `;
+body: JSON.stringify({
+username: username,
+password: password
+})
 
-                    officersTable.appendChild(row);
+})
 
-                });
+.then(res => res.json())
 
-            }
+.then(data => {
 
-            // =========================
-            // LOAD COMPLAINTS
-            // =========================
-            fetch(server + "/admin/complaints")
-                .then(res => res.json())
-                .then(data => {
+if(data.success){
 
-                    let table = document.getElementById("complaintsTable");
+alert("Login successful");
 
-                    table.innerHTML = `
-                        <tr>
-                        <th>ID</th>
-                        <th>Category</th>
-                        <th>Description</th>
-                        <th>Status</th>
-                        <th>Priority</th>
-                        <th>Assign Officer</th>
-                        </tr>
-                    `;
-
-                    data.forEach(c => {
-
-                        let officerOptions = "";
-
-                        officers.forEach(o => {
-                            officerOptions += `<option value="${o.officer_id}">${o.name}</option>`;
-                        });
-
-                        let row = document.createElement("tr");
-
-                        row.innerHTML = `
-                            <td>${c.complaint_id}</td>
-                            <td>${c.category}</td>
-                            <td>${c.description}</td>
-                            <td id="status${c.complaint_id}">${c.status || "Pending"}</td>
-                            <td>${c.priority_count || 1}</td>
-                            <td>
-                                <select id="officer${c.complaint_id}">
-                                    ${officerOptions}
-                                </select>
-
-                                <button onclick="assignOfficer(${c.complaint_id})">
-                                Assign
-                                </button>
-                            </td>
-                        `;
-
-                        // Highlight high priority complaints
-                        if (c.priority_count >= 3) {
-                            row.style.backgroundColor = "#ffe5e5";
-                        }
-
-                        table.appendChild(row);
-
-                    });
-
-                });
-
-        });
-}
-
-// =========================
-// ASSIGN OFFICER FUNCTION
-// =========================
-function assignOfficer(id) {
-
-    let officer = document.getElementById("officer" + id).value;
-
-    fetch(server + "/assign-officer", {
-        method: "POST",
-        headers: { 'Content-Type': 'application/json' },
-
-        body: JSON.stringify({
-            complaint_id: id,
-            officer_id: officer
-        })
-
-    })
-        .then(res => res.json())
-        .then(data => {
-
-            alert(data.message);
-
-            // Update status instantly
-            document.getElementById("status" + id).innerText = "In Progress";
-
-        });
+window.location.href = "admin.html";
 
 }
 
-// =========================
-// ADD OFFICER
-// =========================
+else{
+
+alert("Invalid credentials");
+
+}
+
+})
+
+.catch(err => {
+
+console.log(err);
+alert("Server error");
+
+});
+
+}
+/* =========================
+   LOAD ALL COMPLAINTS
+========================= */
+
+function loadComplaints(){
+
+fetch(server + "/admin/complaints")
+
+.then(res => res.json())
+
+.then(data => {
+
+let table = document.getElementById("complaintsTable");
+
+if(!table) return;
+
+table.innerHTML = `
+<tr>
+<th>ID</th>
+<th>Category</th>
+<th>Description</th>
+<th>Ward</th>
+<th>Status</th>
+<th>Priority</th>
+<th>Assign Officer</th>
+</tr>
+`;
+
+data.forEach(c => {
+
+let row = `
+<tr>
+<td>${c.complaint_id}</td>
+<td>${c.category}</td>
+<td>${c.description}</td>
+<td>${c.ward || "-"}</td>
+<td>${c.status || "Pending"}</td>
+<td>${c.priority_count}</td>
+
+<td>
+<select id="officerSelect${c.complaint_id}">
+<option value="">Select Officer</option>
+</select>
+
+<button onclick="assignOfficer(${c.complaint_id})">
+Assign
+</button>
+</td>
+
+</tr>
+`;
+
+table.innerHTML += row;
+
+});
+
+loadOfficersForDropdown();
+
+});
+
+}
+
+
+
+/* =========================
+   LOAD OFFICERS FOR DROPDOWN
+========================= */
+
+function loadOfficersForDropdown(){
+
+fetch(server + "/officers")
+
+.then(res => res.json())
+
+.then(officers => {
+
+officers.forEach(o => {
+
+document.querySelectorAll("select[id^='officerSelect']").forEach(select => {
+
+let option = document.createElement("option");
+
+option.value = o.officer_id;
+option.text = o.name + " (" + o.department + ")";
+
+select.appendChild(option);
+
+});
+
+});
+
+});
+
+}
+
+
+
+/* =========================
+   ASSIGN OFFICER
+========================= */
+
+function assignOfficer(complaint_id){
+
+let officer_id = document.getElementById(
+"officerSelect" + complaint_id
+).value;
+
+if(!officer_id){
+alert("Please select an officer");
+return;
+}
+
+fetch(server + "/assign-officer",{
+
+method:"POST",
+headers:{'Content-Type':'application/json'},
+
+body:JSON.stringify({
+
+complaint_id:complaint_id,
+officer_id:officer_id
+
+})
+
+})
+
+.then(res=>res.json())
+
+.then(data=>{
+
+alert(data.message);
+
+loadComplaints();
+
+});
+
+}
+
+
+
+/* =========================
+   LOAD OFFICERS TABLE
+========================= */
+
+function loadOfficers(){
+
+fetch(server + "/officers")
+
+.then(res => res.json())
+
+.then(data => {
+
+let table = document.getElementById("officersTable");
+
+if(!table) return;
+
+table.innerHTML = `
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Department</th>
+<th>Action</th>
+</tr>
+`;
+
+data.forEach(o => {
+
+let row = `
+<tr>
+<td>${o.officer_id}</td>
+<td>${o.name}</td>
+<td>${o.department}</td>
+
+<td>
+<button onclick="deleteOfficer(${o.officer_id})">
+Delete
+</button>
+</td>
+
+</tr>
+`;
+
+table.innerHTML += row;
+
+});
+
+});
+
+}
+
+
+
+/* =========================
+   ADD OFFICER
+========================= */
+
 function addOfficer(){
 
-fetch(server+"/admin/add-officer",{
+fetch(server + "/admin/add-officer",{
 
 method:"POST",
 headers:{'Content-Type':'application/json'},
@@ -179,40 +267,63 @@ department:document.getElementById("officerDept").value
 })
 
 })
+
 .then(res=>res.json())
+
 .then(data=>{
 
 alert(data.message);
-location.reload();
+
+loadOfficers();
 
 });
 
 }
 
-// =========================
-// DELETE OFFICER
-// =========================
+
+
+/* =========================
+   DELETE OFFICER
+========================= */
+
 function deleteOfficer(id){
 
-if(!confirm("Are you sure you want to delete this officer?"))
-return;
+if(!confirm("Delete this officer?")) return;
 
-fetch(server+"/admin/delete-officer",{
+fetch(server + "/admin/delete-officer",{
 
 method:"POST",
 headers:{'Content-Type':'application/json'},
 
 body:JSON.stringify({
+
 officer_id:id
+
 })
 
 })
+
 .then(res=>res.json())
+
 .then(data=>{
 
 alert(data.message);
-location.reload();
+
+loadOfficers();
 
 });
 
 }
+
+
+
+/* =========================
+   AUTO LOAD DATA
+========================= */
+
+window.onload = function(){
+
+loadComplaints();
+loadOfficers();
+
+};

@@ -12,25 +12,20 @@
 Admin Dashboard
 </div>
 
-<h2>Add Officer</h2>
+<div class="tabs">
 
-<input id="officerName" placeholder="Officer Name">
-<input id="officerEmail" placeholder="Email">
-<input id="officerPassword" placeholder="Password">
-<input id="officerDept" placeholder="Department">
+<button onclick="showTab('complaintsTab')">Complaints</button>
+<button onclick="showTab('officersTab')">Officers</button>
+<button onclick="showTab('addOfficerTab')">Add Officer</button>
 
-<button onclick="addOfficer()">Add Officer</button>
+</div>
 
-<h2>Existing Officers</h2>
 
-<table id="officersTable">
-<tr>
-<th>ID</th>
-<th>Name</th>
-<th>Department</th>
-<th>Action</th>
-</tr>
-</table>
+<!-- =========================
+COMPLAINTS TAB
+========================= -->
+
+<div id="complaintsTab" class="tabContent">
 
 <h2>Complaints</h2>
 
@@ -40,6 +35,7 @@ Admin Dashboard
 <th>ID</th>
 <th>Category</th>
 <th>Description</th>
+<th>Ward</th>
 <th>Status</th>
 <th>Priority</th>
 <th>Assign Officer</th>
@@ -47,7 +43,68 @@ Admin Dashboard
 
 </table>
 
+</div>
+
+
+<!-- =========================
+OFFICERS TAB
+========================= -->
+
+<div id="officersTab" class="tabContent" style="display:none;">
+
+<h2>Existing Officers</h2>
+
+<table id="officersTable">
+
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Department</th>
+<th>Action</th>
+</tr>
+
+</table>
+
+</div>
+
+
+<!-- =========================
+ADD OFFICER TAB
+========================= -->
+
+<div id="addOfficerTab" class="tabContent" style="display:none;">
+
+<h2>Add Officer</h2>
+
+<div class="container">
+
+<input id="officerName" placeholder="Officer Name">
+<input id="officerEmail" placeholder="Email">
+<input id="officerPassword" placeholder="Password">
+<input id="officerDept" placeholder="Department">
+
+<button onclick="addOfficer()">Add Officer</button>
+
+</div>
+
+</div>
+
+
 <script src="admin.js"></script>
+
+<script>
+
+function showTab(tab){
+
+document.getElementById("complaintsTab").style.display="none";
+document.getElementById("officersTab").style.display="none";
+document.getElementById("addOfficerTab").style.display="none";
+
+document.getElementById(tab).style.display="block";
+
+}
+
+</script>
 
 </body>
 </html>

@@ -57,24 +57,42 @@ app.post("/citizen/login", (req, res) => {
 /* =========================
    SUBMIT COMPLAINT WITH DUPLICATE DETECTION
 ========================= */
-app.post("/complaint", (req,res)=>{
+
+app.post("/complaint",(req,res)=>{
 
 const {citizen_id,category,description}=req.body;
 
+// extract keyword
 let keyword = description.split(" ")[0];
 
+// get ward from citizens table
+db.get(
+`SELECT ward FROM citizens WHERE citizen_id=?`,
+[citizen_id],
+
+function(err,user){
+
+if(err || !user){
+return res.json({message:"Citizen not found"});
+}
+
+let ward = user.ward;
+
+// check duplicate complaint
 db.get(
 `SELECT * FROM complaints
 WHERE category=? 
+AND ward=? 
 AND description LIKE ?
-AND complaint_date >= date('now','-3 day')`,
-[category,"%"+keyword+"%"],
+AND complaint_date >= date('now','-7 day')`,
+
+[category,ward,"%"+keyword+"%"],
 
 function(err,row){
 
 if(row){
 
-// Similar complaint found
+// duplicate found → increase priority
 db.run(
 `UPDATE complaints
 SET priority_count = priority_count + 1
@@ -84,33 +102,37 @@ WHERE complaint_id=?`,
 function(){
 
 res.json({
-message:"Similar complaint already received. Priority increased."
+message:"Similar complaint found. Priority increased."
 });
 
 });
 
 }else{
 
-// New complaint
+// insert new complaint
 const date = new Date().toISOString().split("T")[0];
 
 db.run(
 `INSERT INTO complaints
-(citizen_id,category,description,complaint_date,priority_count,status)
-VALUES(?,?,?,?,1,'Pending')`,
-[citizen_id,category,description,date],
+(citizen_id,category,description,ward,complaint_date,priority_count)
+VALUES(?,?,?,?,?,1)`,
+
+[citizen_id,category,description,ward,date],
 
 function(err){
 
 if(err){
-res.json({message:"Error submitting complaint"});
+console.log(err);
+res.json({message:"Complaint submission failed"});
 }else{
-res.json({message:"Complaint submitted"});
+res.json({message:"Complaint submitted successfully"});
 }
 
 });
 
 }
+
+});
 
 });
 
@@ -137,20 +159,24 @@ app.get("/complaints/:citizen_id", (req, res) => {
 /* =========================
    ADMIN LOGIN
 ========================= */
-app.post("/admin/login", (req, res) => {
-    const { username, password } = req.body;
+app.post("/admin/login", (req,res)=>{
 
-    db.get(
-        `SELECT * FROM admins WHERE username=? AND password=?`,
-        [username, password],
-        (err, row) => {
-            if (row) {
-                res.json({ message: "success", admin_id: row.admin_id });
-            } else {
-                res.json({ message: "invalid" });
-            }
-        }
-    );
+const {username,password} = req.body;
+
+db.get(
+"SELECT * FROM admins WHERE username=? AND password=?",
+[username,password],
+(err,row)=>{
+
+if(row){
+res.json({success:true});
+}
+else{
+res.json({success:false});
+}
+
+});
+
 });
 
 /* =========================
