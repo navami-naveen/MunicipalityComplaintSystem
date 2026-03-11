@@ -246,6 +246,50 @@ app.post("/update-status", (req, res) => {
     );
 });
 
+/* =========================
+   ADD NEW OFFICER
+========================= */
+app.post("/admin/add-officer", (req, res) => {
+
+    const { name, email, password, department } = req.body;
+
+    db.run(
+        `INSERT INTO officers (name,email,password,department) VALUES (?,?,?,?)`,
+        [name, email, password, department],
+        function(err){
+            if(err){
+                console.log(err);
+                res.json({message:"Failed to add officer"});
+            }else{
+                res.json({message:"Officer added successfully"});
+            }
+        }
+    );
+
+});
+
+/* =========================
+   DELETE OFFICER
+========================= */
+app.post("/admin/delete-officer", (req, res) => {
+
+    const { officer_id } = req.body;
+
+    db.run(
+        `DELETE FROM officers WHERE officer_id=?`,
+        [officer_id],
+        function(err){
+            if(err){
+                console.log(err);
+                res.json({message:"Failed to delete officer"});
+            }else{
+                res.json({message:"Officer deleted successfully"});
+            }
+        }
+    );
+
+});
+
 app.listen(3000, () => {
     console.log("Server running on http://localhost:3000");
 });
