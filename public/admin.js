@@ -1,5 +1,17 @@
 const server = "http://localhost:3000";
+function showPopup(message){
+  let popup = document.getElementById("popup");
+  let msg = document.getElementById("popupMessage");
 
+  if(!popup) return;
+
+  msg.innerText = message;
+  popup.style.display = "flex";
+
+  setTimeout(()=>{
+    popup.style.display = "none";
+  },1500);
+}
 /* =========================
    ADMIN LOGIN
 ========================= */
@@ -32,7 +44,7 @@ password: password
 
 if(data.success){
 
-alert("Login successful");
+showPopup("Login successful");
 
 window.location.href = "admin.html";
 
@@ -40,7 +52,7 @@ window.location.href = "admin.html";
 
 else{
 
-alert("Invalid credentials");
+showPopup("Invalid credentials");
 
 }
 
@@ -49,7 +61,7 @@ alert("Invalid credentials");
 .catch(err => {
 
 console.log(err);
-alert("Server error");
+showPopup("Server error");
 
 });
 
@@ -89,12 +101,12 @@ let row = `
 <td>${c.complaint_id}</td>
 <td>${c.category}</td>
 <td>${c.description}</td>
-<td>${c.ward || "-"}</td>
+<td>${c.ward}</td>
 <td>${c.status || "Pending"}</td>
 <td>${c.priority_count}</td>
 
 <td>
-<select id="officerSelect${c.complaint_id}">
+<select id="officerSelect${c.complaint_id}" onchange="this.setAttribute('data-selected', this.value)">
 <option value="">Select Officer</option>
 </select>
 
@@ -110,7 +122,7 @@ table.innerHTML += row;
 
 });
 
-loadOfficersForDropdown();
+loadOfficersForDropdown(data);
 
 });
 
@@ -122,24 +134,29 @@ loadOfficersForDropdown();
    LOAD OFFICERS FOR DROPDOWN
 ========================= */
 
-function loadOfficersForDropdown(){
+function loadOfficersForDropdown(data){
 
 fetch(server + "/officers")
-
 .then(res => res.json())
-
 .then(officers => {
+
+data.forEach(c => {
+
+let select = document.getElementById("officerSelect" + c.complaint_id);
+if(!select) return;
 
 officers.forEach(o => {
 
-document.querySelectorAll("select[id^='officerSelect']").forEach(select => {
-
 let option = document.createElement("option");
-
 option.value = o.officer_id;
 option.text = o.name + " (" + o.department + ")";
 
 select.appendChild(option);
+
+// ✅ SET SELECTED OFFICER
+if(c.officer_id && c.officer_id == o.officer_id){
+    select.value = o.officer_id;
+}
 
 });
 
@@ -148,8 +165,6 @@ select.appendChild(option);
 });
 
 }
-
-
 
 /* =========================
    ASSIGN OFFICER
@@ -162,7 +177,7 @@ let officer_id = document.getElementById(
 ).value;
 
 if(!officer_id){
-alert("Please select an officer");
+showPopup("Please select an officer");
 return;
 }
 
@@ -184,7 +199,7 @@ officer_id:officer_id
 
 .then(data=>{
 
-alert(data.message);
+showPopup(data.message);
 
 loadComplaints();
 
@@ -272,7 +287,7 @@ department:document.getElementById("officerDept").value
 
 .then(data=>{
 
-alert(data.message);
+showPopup(data.message);
 
 loadOfficers();
 
@@ -307,7 +322,7 @@ officer_id:id
 
 .then(data=>{
 
-alert(data.message);
+showPopup(data.message);
 
 loadOfficers();
 
@@ -327,3 +342,28 @@ loadComplaints();
 loadOfficers();
 
 };
+document.addEventListener("DOMContentLoaded", () => {
+
+  const inputs = document.querySelectorAll("input");
+
+  inputs.forEach((input, index) => {
+
+    input.addEventListener("keypress", function(e){
+
+      if(e.key === "Enter"){
+
+        e.preventDefault();
+
+        if(index < inputs.length - 1){
+          inputs[index + 1].focus();
+        } else {
+          addOfficer(); // for admin add officer form
+        }
+
+      }
+
+    });
+
+  });
+
+});

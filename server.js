@@ -15,6 +15,21 @@ app.post("/citizen/register",(req,res)=>{
 
 const {name,email,password,ward,phone}=req.body;
 
+// ✅ CHECK IF USER EXISTS FIRST
+db.get(
+`SELECT * FROM citizens WHERE email=?`,
+[email],
+(err,row)=>{
+
+if(err){
+return res.json({message:"Database error"});
+}
+
+if(row){
+return res.json({message:"User already registered"}); // ✅ FIX
+}
+
+// ✅ INSERT IF NOT EXISTS
 db.run(
 `INSERT INTO citizens(name,email,password,ward,phone)
 VALUES(?,?,?,?,?)`,
@@ -28,6 +43,8 @@ res.json({message:"Registration failed"});
 }else{
 res.json({message:"Registration successful"});
 }
+
+});
 
 });
 
@@ -125,7 +142,17 @@ if(err){
 console.log(err);
 res.json({message:"Complaint submission failed"});
 }else{
-res.json({message:"Complaint submitted successfully"});
+
+    let complaint_id = this.lastID; // ✅ GET ID
+
+    // ✅ ADD THIS BLOCK (VERY IMPORTANT)
+    db.run(
+    `INSERT INTO Status_History (complaint_id, status)
+     VALUES (?, 'Pending')`,
+    [complaint_id]
+    );
+
+    res.json({message:"Complaint submitted successfully"});
 }
 
 });
@@ -142,18 +169,35 @@ res.json({message:"Complaint submitted successfully"});
    GET CITIZEN COMPLAINTS
 ========================= */
 app.get("/complaints/:citizen_id", (req, res) => {
+
     const citizen_id = req.params.citizen_id;
 
     db.all(
-        `SELECT c.*, sh.status
-         FROM complaints c
-         LEFT JOIN Status_History sh ON c.complaint_id = sh.complaint_id
-         WHERE c.citizen_id=?`,
+        `SELECT c.complaint_id, c.category, c.description,
+        COALESCE(sh.status, 'Pending') AS status
+        FROM complaints c
+        LEFT JOIN (
+            SELECT complaint_id, status
+            FROM Status_History
+            WHERE rowid IN (
+                SELECT MAX(rowid)
+                FROM Status_History
+                GROUP BY complaint_id
+            )
+        ) sh ON c.complaint_id = sh.complaint_id
+        WHERE c.citizen_id = ?`,
         [citizen_id],
         (err, rows) => {
+
+            if(err){
+                console.log(err);
+                return res.json([]);
+            }
+
             res.json(rows);
         }
     );
+
 });
 
 /* =========================
@@ -183,9 +227,20 @@ res.json({success:false});
    GET ALL COMPLAINTS (ADMIN)
 ========================= */
 app.get("/admin/complaints", (req, res) => {
-    db.all(`SELECT * FROM complaints`, [], (err, rows) => {
-        res.json(rows);
-    });
+    db.all(
+        `SELECT c.*, 
+        ca.officer_id,
+        (SELECT status FROM Status_History 
+         WHERE complaint_id = c.complaint_id 
+         ORDER BY rowid DESC LIMIT 1) AS status
+         FROM complaints c
+         LEFT JOIN Complaint_Assignment ca 
+         ON c.complaint_id = ca.complaint_id`,
+        [],
+        (err, rows) => {
+            res.json(rows);
+        }
+    );
 });
 
 /* =========================
@@ -289,7 +344,7 @@ app.get("/officer/complaints/:officer_id", (req, res) => {
 
     db.all(
         `SELECT c.*, 
-                (SELECT status FROM Status_History WHERE complaint_id=c.complaint_id ORDER BY updated_date DESC LIMIT 1) AS status
+                (SELECT status FROM Status_History WHERE complaint_id=c.complaint_id ORDER BY rowid DESC LIMIT 1) AS status
          FROM complaints c
          JOIN Complaint_Assignment ca ON c.complaint_id = ca.complaint_id
          WHERE ca.officer_id=?`,
@@ -305,20 +360,24 @@ app.get("/officer/complaints/:officer_id", (req, res) => {
    UPDATE STATUS (OFFICER)
 ========================= */
 app.post("/update-status", (req, res) => {
+
     const { complaint_id, status } = req.body;
-    const date = new Date().toISOString().split("T")[0];
 
     db.run(
-        `INSERT INTO Status_History (complaint_id,status,updated_date) VALUES (?,?,?)`,
-        [complaint_id, status, date],
-        (err) => {
-            if (err) {
-                res.json({ message: "Status update failed" });
-            } else {
-                res.json({ message: "Status updated" });
+        `INSERT INTO Status_History (complaint_id, status)
+         VALUES (?, ?)`,
+        [complaint_id, status],
+        function(err){
+
+            if(err){
+                console.log(err);
+                return res.json({message:"Error updating status"});
             }
+
+            res.json({message:"Status updated"});
         }
     );
+
 });
 
 /* =========================

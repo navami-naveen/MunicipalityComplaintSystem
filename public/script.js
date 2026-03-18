@@ -1,4 +1,44 @@
 const server = "http://localhost:3000";
+function showPopup(message){
+  let popup = document.getElementById("popup");
+  let msg = document.getElementById("popupMessage");
+
+  if(!popup) return;
+
+  msg.innerText = message;
+  popup.style.display = "flex";
+
+  setTimeout(()=>{
+    popup.style.display = "none";
+  },1500);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const inputs = document.querySelectorAll("input");
+
+  inputs.forEach((input, index) => {
+
+    input.addEventListener("keypress", function(e){
+
+      if(e.key === "Enter"){
+
+        e.preventDefault();
+
+        if(index < inputs.length - 1){
+          inputs[index + 1].focus(); // go next
+        } else {
+          register(); // last field → submit
+        }
+
+      }
+
+    });
+
+  });
+
+});
+
 
 /* =========================
    CITIZEN REGISTER
@@ -22,11 +62,19 @@ phone:document.getElementById("phone").value
 })
 
 })
-.then(res=>res.json())
+.then(res => res.json())   // ✅ THIS WAS MISSING
 .then(data=>{
 
-alert(data.message);
-window.location="login.html";
+showPopup(data.message);
+
+// ✅ Redirect for BOTH success and already registered
+if(data.message === "Registration successful" || 
+   data.message === "User already registered"){
+
+    setTimeout(()=>{
+        window.location = "login.html";
+    },1500);
+}
 
 });
 
@@ -62,7 +110,7 @@ window.location="dashboard.html";
 
 }else{
 
-alert("Invalid email or password");
+showPopup("Invalid email or password");
 
 }
 
@@ -93,7 +141,7 @@ description:document.getElementById("description").value
 .then(res=>res.json())
 .then(data=>{
 
-alert(data.message);
+showToast(data.message);
 
 loadComplaints();
 
@@ -112,6 +160,8 @@ fetch(server + "/complaints/" + localStorage.getItem("citizen_id"))
 .then(res=>res.json())
 
 .then(data=>{
+
+console.log(data); // ✅ MUST be INSIDE here
 
 let table=document.getElementById("complaintsTable");
 
@@ -133,7 +183,7 @@ let row=`
 <td>${c.complaint_id}</td>
 <td>${c.category}</td>
 <td>${c.description}</td>
-<td>${c.status}</td>
+<td>${c.status || "Pending"}</td>
 </tr>
 `;
 
@@ -141,18 +191,38 @@ table.innerHTML+=row;
 
 });
 
-});
+}); // ✅ data exists ONLY till here
 
 }
+/* =========================
+   TOAST FUNCTION
+========================= */
 
-/* AUTO LOAD COMPLAINTS WHEN DASHBOARD OPENS */
+function showToast(message){
+  let t = document.getElementById("toast");
 
-if(window.location.pathname.includes("dashboard.html")){
+  if(!t) return; // safety check
 
-if(!localStorage.getItem("citizen_id")){
-window.location="login.html";
+  t.innerText = message;
+  t.className = "show";
+
+  setTimeout(()=>{
+    t.className = "";
+  },3000);
 }
+window.onload = function(){
 
-loadComplaints();
+    // run ONLY on dashboard page
+    if(window.location.href.includes("dashboard.html")){
 
-}
+        let citizen_id = localStorage.getItem("citizen_id");
+
+        if(!citizen_id){
+            window.location = "login.html";
+            return;
+        }
+
+        loadComplaints(); // ✅ THIS WAS MISSING
+    }
+
+};
